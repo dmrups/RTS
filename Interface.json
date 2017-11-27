@@ -1,0 +1,40 @@
+Game{
+	Id:int,
+	Tick:int,
+	Map{
+		Size{
+			X:float,
+			Y:float
+		}
+	},
+	Units: [
+		{
+		Id:int,
+		PlayerId:int,
+		Health: float,
+		MaxHealth: float,
+		Position: {
+			X:float,
+			Y:float
+			},
+		Destination{
+			X:float,
+			Y:float
+			},
+		Target: int, /*unit id*/
+		AttackRange: float,
+		AttackPower: float, /*health per tick*/
+		Speed:float /*distance per tick*/
+		Size:float /*diameter of the unit*/
+		}
+	],
+	Players: [
+		{
+		Name:string,
+		Id:int,
+		Score:float,
+		Kills: [Unit
+			]
+		}
+	]
+}

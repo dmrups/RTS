@@ -1,0 +1,7 @@
+{
+    "AttackPower": 1, /*Health/s*/
+    "AttackRange": 20, /*radius in m*/
+    "MaxHealth": 10,
+    "Speed": 1, /*m/s*/
+    "Size": 1 /*diameter in m*/
+}

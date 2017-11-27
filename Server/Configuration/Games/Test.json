@@ -1,0 +1,7 @@
+{
+    "TicksPerSecond": 1000,
+    "NumberOfPlayers": 2,
+    "Units": {
+        "Mariner": 10
+    }
+}

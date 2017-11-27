@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+    <script src="two.min.js"></script>
+</head>
+
+<body>
+    <div>
+        <label id="stateLabel">Ready</label>
+        <button id="connectButton" type="submit">Connect</button>
+    </div>
+    <div id="canvas" style="width:100%; height:100%"></div>
+    <script>
+        var connectButton = document.getElementById("connectButton");
+        var stateLabel = document.getElementById("stateLabel");
+        var canvas = document.getElementById("canvas");
+        var two = new Two({ width: 900, height: 900 }).appendTo(canvas);
+
+        var playerId;
+        var shapes = {};
+
+        var socket;
+        var scheme = document.location.protocol == "https:" ? "wss" : "ws";
+        var port = document.location.port ? (":" + document.location.port) : "";
+        function updateState() {
+            connectButton.disabled = true;
+            if (socket) {
+                switch (socket.readyState) {
+                    case WebSocket.CLOSED:
+                        stateLabel.innerHTML = "Closed";
+                        connectButton.disabled = false;
+                        break;
+                    case WebSocket.CLOSING:
+                        stateLabel.innerHTML = "Closing...";
+                        break;
+                    case WebSocket.CONNECTING:
+                        stateLabel.innerHTML = "Connecting...";
+                        break;
+                    case WebSocket.OPEN:
+                        stateLabel.innerHTML = "Open";
+                        break;
+                    default:
+                        stateLabel.innerHTML = "Unknown WebSocket State: " + htmlEscape(socket.readyState);
+                        break;
+                }
+            }
+        }
+        function Close() {
+            if (!socket || socket.readyState != WebSocket.OPEN) {
+                alert("socket not connected");
+            }
+            socket.close(1000, "Closing from client");
+        }
+        function Send(data) {
+            if (!socket || socket.readyState != WebSocket.OPEN) {
+                alert("socket not connected");
+            }
+            socket.send(JSON.stringify(data));
+        }
+        function Draw(data) {
+            for (var i = 0; i < data.units.length; i++) {
+                var unit = data.units[i];
+                var unitShape = shapes[unit.id];
+                if (unitShape) {
+                    unitShape.shape.translation.set(unit.position.x, unit.position.y);
+                }
+                else {
+                    var shape = two.makeCircle(unit.position.x, unit.position.y, unit.size);
+                    if (unit.playerId == playerId) {
+                        shape.fill = 'rgba(0, 200, 255, 0.75)';
+                    }
+                    else {
+                        shape.fill = '#FF8000';
+                    }
+                    shapes[unit.id] = { shape: shape, x: unit.position.x, y: unit.position.y };
+                }
+            }
+            two.play();
+        }
+        function ProcessGame(data) {
+            var myUnits = [];
+            var enemies = [];
+
+            for (var i = 0; i < data.units.length; i++) {
+                var unit = data.units[i];
+
+                if (unit.playerId == playerId) {
+                    unit.destination = {
+                        x: data.map.size.x / 2,
+                        y: data.map.size.y / 2
+                    };
+                    myUnits.push(unit);
+                }
+                else {
+                    enemies.push(unit);
+                }
+            }
+
+            if (enemies.length > 0) {
+                for (var i = 0; i < myUnits.length; i++) {
+                    myUnits[i].target = enemies[0].id;
+                }
+            }
+            return data;
+        }
+        connectButton.onclick = function () {
+            stateLabel.innerHTML = "Connecting";
+            socket = new WebSocket("ws://127.0.0.1:5005/ws");
+            socket.onopen = function () {
+                Send({ code: "register", type: "strategy", name: "name" });
+            }
+            socket.onclose = updateState;
+            socket.onerror = updateState;
+            socket.onmessage = function (event) {
+                if (event.data) {
+                    var message = JSON.parse(event.data);
+                    if (message.code == "gameState") {
+                        Draw(message.game);
+                        Send({ code: "gameState", game: ProcessGame(message.game) });
+                    }
+                    else if (message.code == "register") {
+                        playerId = message.playerId;
+                    }
+					else if (message.code == "gameFinish"){
+						console.log(message.scoreTable);
+					}
+					else{
+						console.log(message);
+					}
+                }
+            }
+        };
+        function htmlEscape(str) {
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+    </script>
+</body>
+
+</html>
